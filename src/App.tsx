@@ -1,10 +1,41 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowDown, MoonStar, Sparkles, WandSparkles, Heart, RotateCcw } from 'lucide-react';
+import { ArrowDown, MoonStar, Sparkles, WandSparkles, Heart, RotateCcw, Send, Check } from 'lucide-react';
 import IntroSequence, { hasSeenIntroThisSession, shouldSkipIntroForReducedMotion } from './components/IntroSequence';
 import AudioToggle from './components/AudioToggle';
 import PipMascot from './components/PipMascot';
 import FairyDustIndex from './components/FairyDustIndex';
-import { enableAudio } from './utils/audio';
+import { enableAudio, playChime } from './utils/audio';
+
+const ROUTE_WINDOWS = [
+  {
+    id: 1,
+    title: 'The Clocktower Attic',
+    dreamer: 'A clockkeeper counting ticks',
+    gift: 'Slow pendulum dreams',
+    freq: 523.25,
+  },
+  {
+    id: 2,
+    title: 'The Greenhouse Glass',
+    dreamer: 'A botanist & night jasmine',
+    gift: 'Moonlight mist & soft breeze',
+    freq: 659.25,
+  },
+  {
+    id: 3,
+    title: 'The Rooftop Nest',
+    dreamer: 'A swallow resting from fog',
+    gift: 'A warm feather blanket',
+    freq: 783.99,
+  },
+  {
+    id: 4,
+    title: 'The Harbor Lookout',
+    dreamer: 'An old sailor watching the tide',
+    gift: 'Gentle waves & starlight',
+    freq: 1046.5,
+  },
+];
 
 export default function App() {
   const [introVisible, setIntroVisible] = useState(() => {
@@ -28,6 +59,35 @@ export default function App() {
   const [activeProjects, setActiveProjects] = useState<number[]>([]);
   const [lullabyPlaying, setLullabyPlaying] = useState(false);
   const lullabyRef = useRef<HTMLAudioElement | null>(null);
+  const [deliveredWindows, setDeliveredWindows] = useState<number[]>([]);
+  const [latestDelivery, setLatestDelivery] = useState<string | null>(null);
+
+  const deliverDreamTo = (windowId: number) => {
+    const win = ROUTE_WINDOWS.find((w) => w.id === windowId);
+    if (!win) return;
+
+    if (!deliveredWindows.includes(windowId)) {
+      setDeliveredWindows((prev) => [...prev, windowId]);
+      setLatestDelivery(`Waved at ${win.title}: Sent ${win.gift}! ✨`);
+      playChime(soundEnabled, win.freq);
+    } else {
+      setLatestDelivery(`Waved again at ${win.title} ♡`);
+      playChime(soundEnabled, win.freq * 1.15);
+    }
+  };
+
+  const deliverNextWindow = () => {
+    const next = ROUTE_WINDOWS.find((w) => !deliveredWindows.includes(w.id));
+    if (next) {
+      deliverDreamTo(next.id);
+    }
+  };
+
+  const resetRoute = () => {
+    setDeliveredWindows([]);
+    setLatestDelivery('Satchel repacked with fresh starlight dreams! ✦');
+    playChime(soundEnabled, 440);
+  };
 
   // Clean up audio on unmount
   useEffect(() => {
@@ -304,11 +364,118 @@ export default function App() {
                     className="project-art__img project-art__img--pip"
                     loading="lazy"
                   />
+                  {activeProjects.includes(3) && (
+                    <div className="route-flight-trail" aria-hidden="true">
+                      <span className="route-star-pulse route-star-pulse--1">✦</span>
+                      <span className="route-star-pulse route-star-pulse--2">✧</span>
+                      <span className="route-star-pulse route-star-pulse--3">✨</span>
+                    </div>
+                  )}
                 </div>
                 <span className="project-art__sparkle project-art__sparkle--one">☁</span>
                 <span className="project-art__sparkle project-art__sparkle--two">✦</span>
               </div>
-              <div className="project-card__body"><p className="project-number">PROJECT 03 · DREAM DELIVERY</p><h3>The Window-Waving Route</h3><p>A delivery route that takes the long way round because every sleeping window deserves a little hello.</p><details className="project-details"><summary>Inspect the invention</summary><p>Instead of optimizing only for speed, Pip’s route leaves room for small rituals: a wave, a star, and one more gentle goodnight.</p></details><button className="project-action" type="button" onClick={() => toggleProject(3)} aria-pressed={activeProjects.includes(3)}>{activeProjects.includes(3) ? 'Finish the route' : 'Send a dream'} <span aria-hidden="true">↗</span></button></div>
+              <div className="project-card__body">
+                <p className="project-number">PROJECT 03 · DREAM DELIVERY</p>
+                <h3>The Window-Waving Route</h3>
+                <p>A delivery route that takes the long way round because every sleeping window deserves a little hello.</p>
+                <details className="project-details">
+                  <summary>Inspect the invention</summary>
+                  <p>Instead of optimizing only for speed, Pip’s route leaves room for small rituals: a wave, a star, and one more gentle goodnight.</p>
+                </details>
+
+                {activeProjects.includes(3) && (
+                  <div className="delivery-route-dashboard" role="region" aria-label="Interactive Dream Delivery Route">
+                    <div className="route-progress-bar-wrap">
+                      <div className="route-progress-info">
+                        <span className="route-progress-text">
+                          <Sparkles size={13} aria-hidden="true" />
+                          {deliveredWindows.length === ROUTE_WINDOWS.length
+                            ? 'All 4 sleeping windows greeted! ☾'
+                            : `Delivered to ${deliveredWindows.length} of ${ROUTE_WINDOWS.length} windows`}
+                        </span>
+                        <span className="route-progress-pct">
+                          {Math.round((deliveredWindows.length / ROUTE_WINDOWS.length) * 100)}%
+                        </span>
+                      </div>
+                      <div className="route-progress-track">
+                        <div
+                          className="route-progress-fill"
+                          style={{ width: `${(deliveredWindows.length / ROUTE_WINDOWS.length) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="route-windows-grid">
+                      {ROUTE_WINDOWS.map((win, idx) => {
+                        const isDelivered = deliveredWindows.includes(win.id);
+                        return (
+                          <button
+                            key={win.id}
+                            type="button"
+                            className={`route-window-card ${isDelivered ? 'route-window-card--delivered' : ''}`}
+                            onClick={() => deliverDreamTo(win.id)}
+                            aria-label={`${win.title}: ${win.dreamer}. ${isDelivered ? 'Dream delivered' : 'Click to wave and deliver dream'}`}
+                            aria-pressed={isDelivered}
+                          >
+                            <div className="window-card-header">
+                              <span className="window-emoji" aria-hidden="true">{isDelivered ? '✨' : '🪟'}</span>
+                              <span className="window-number">STOP 0{idx + 1}</span>
+                              {isDelivered && <span className="window-check" aria-hidden="true"><Check size={12} /></span>}
+                            </div>
+                            <div className="window-title">{win.title}</div>
+                            <div className="window-dreamer">{win.dreamer}</div>
+                            <div className="window-gift-tag">
+                              {isDelivered ? `♡ ${win.gift}` : `Wave & send ${win.gift}`}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {latestDelivery && (
+                      <div className="route-toast-banner" role="status" aria-live="polite">
+                        <span>{latestDelivery}</span>
+                      </div>
+                    )}
+
+                    <div className="route-quick-actions">
+                      {deliveredWindows.length < ROUTE_WINDOWS.length ? (
+                        <button
+                          type="button"
+                          className="route-btn-primary"
+                          onClick={deliverNextWindow}
+                        >
+                          <Send size={13} aria-hidden="true" /> Wave at next window
+                        </button>
+                      ) : (
+                        <div className="route-completed-badge">
+                          <Heart size={14} aria-hidden="true" /> Every window is resting warmly!
+                        </div>
+                      )}
+                      {deliveredWindows.length > 0 && (
+                        <button
+                          type="button"
+                          className="route-btn-secondary"
+                          onClick={resetRoute}
+                          title="Reset delivery route to deliver dreams again"
+                        >
+                          <RotateCcw size={12} aria-hidden="true" /> Reset route
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  className="project-action"
+                  type="button"
+                  onClick={() => toggleProject(3)}
+                  aria-pressed={activeProjects.includes(3)}
+                >
+                  {activeProjects.includes(3) ? 'Finish the route' : 'Send a dream'} <span aria-hidden="true">↗</span>
+                </button>
+              </div>
             </article>
           </div>
           <p className="projects-footnote"><Heart size={13} aria-hidden="true" /> Pip’s rule: if it helps someone feel less alone, it’s working.</p>
