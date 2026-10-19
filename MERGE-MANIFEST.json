@@ -1,0 +1,17 @@
+{
+  "project": "Pip \u2014 Midnight Nursery",
+  "unified_folder": "pip-midnight-nursery-unified",
+  "canonical_source": "pip-midnight-nursery-phase-8.zip",
+  "input_archives": [
+    "pip-midnight-nursery-phase-1.zip",
+    "pip-midnight-nursery-phase-2.zip",
+    "pip-midnight-nursery-phase-3.zip",
+    "pip-midnight-nursery-phase-4.zip",
+    "pip-midnight-nursery-phase-5.zip",
+    "pip-midnight-nursery-phase-6.zip",
+    "pip-midnight-nursery-phase-7.zip",
+    "pip-midnight-nursery-phase-8.zip"
+  ],
+  "merge_policy": "latest cumulative Phase 8 snapshot; preserve cumulative changelogs and unique assets; omit generated cache",
+  "build_verified": false
+}
