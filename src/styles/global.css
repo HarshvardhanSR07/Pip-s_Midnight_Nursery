@@ -548,11 +548,55 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--gold); outline-
 .project-art__frame{position:relative;width:140px;height:140px;border-radius:24px;overflow:hidden;border:1.5px solid rgba(224,210,255,.22);box-shadow:0 12px 28px rgba(0,0,0,.45),0 0 20px rgba(220,200,255,.12);background:#1b1928;transition:transform .45s cubic-bezier(.2,.8,.2,1),box-shadow .45s ease,border-color .45s ease}.project-card:hover .project-art__frame{transform:translateY(-2px) scale(1.03);box-shadow:0 16px 36px rgba(0,0,0,.55),0 0 30px rgba(220,200,255,.22);border-color:rgba(224,210,255,.4)}.project-card--awake .project-art__frame{transform:scale(1.06);border-color:rgba(245,230,200,.7);box-shadow:0 16px 40px rgba(0,0,0,.6),0 0 35px rgba(245,220,160,.35)}.project-card--lullaby.project-card--awake .project-art__frame{border-color:rgba(230,200,255,.8);box-shadow:0 16px 40px rgba(0,0,0,.6),0 0 35px rgba(225,185,255,.38)}.project-card--lantern.project-card--awake .project-art__frame{border-color:rgba(248,224,160,.85);box-shadow:0 16px 40px rgba(0,0,0,.6),0 0 38px rgba(248,218,140,.42)}.project-card--route.project-card--awake .project-art__frame{border-color:rgba(180,225,245,.8);box-shadow:0 16px 40px rgba(0,0,0,.6),0 0 35px rgba(160,220,245,.38)}
 .project-art__img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;transition:transform .6s cubic-bezier(.2,.8,.2,1),filter .4s ease}.project-art__img--pip{object-position:center 30%}.project-card:hover .project-art__img{transform:scale(1.05)}.project-card--awake .project-art__img{transform:scale(1.08);filter:saturate(1.1) brightness(1.05)}
 .project-art__sparkle{position:absolute;color:#f5e7c3;pointer-events:none;font-size:18px;opacity:.6;text-shadow:0 0 12px rgba(245,231,195,.6);transition:transform .5s cubic-bezier(.2,.8,.2,1),opacity .4s ease}.project-art__sparkle--one{top:22px;left:24px}.project-art__sparkle--two{bottom:24px;right:26px;font-size:20px}.project-card:hover .project-art__sparkle--one{transform:translate(-3px,-3px) scale(1.15);opacity:.9}.project-card:hover .project-art__sparkle--two{transform:translate(3px,3px) scale(1.15);opacity:.9}.project-card--awake .project-art__sparkle--one{transform:translate(-5px,-6px) scale(1.25);opacity:1;color:#fff2c4}.project-card--awake .project-art__sparkle--two{transform:translate(5px,6px) scale(1.25);opacity:1;color:#fff2c4}
+.project-card--lantern.project-card--awake {
+  border-color: rgba(255, 215, 120, 0.85);
+  background: linear-gradient(150deg, rgba(255, 210, 110, 0.18), rgba(255, 180, 60, 0.06), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.5), 0 0 50px rgba(255, 200, 90, 0.4);
+}
+.project-card--lantern.project-card--awake .project-art {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 220, 130, 0.5) 0%, rgba(255, 175, 50, 0.3) 45%, transparent 75%), linear-gradient(145deg, #3d2f21, #1c1824);
+}
+.project-card--lantern.project-card--awake .project-art__frame {
+  transform: scale(1.08);
+  border-color: rgba(255, 240, 170, 1);
+  box-shadow: 0 0 55px rgba(255, 215, 110, 0.95), 0 0 95px rgba(255, 170, 40, 0.65), 0 16px 45px rgba(0, 0, 0, 0.7);
+}
+.project-card--lantern.project-card--awake .project-art__img {
+  transform: scale(1.12);
+  filter: brightness(1.42) contrast(1.15) saturate(1.45) drop-shadow(0 0 25px rgba(255, 220, 120, 1)) drop-shadow(0 0 55px rgba(255, 175, 40, 0.7));
+  animation: lanternGlowPulse 2.8s ease-in-out infinite alternate;
+}
+.project-card--lantern.project-card--awake .project-art__sparkle--one {
+  transform: translate(-7px, -8px) scale(1.5);
+  opacity: 1;
+  color: #fffdf5;
+  text-shadow: 0 0 16px rgba(255, 235, 150, 1), 0 0 32px rgba(255, 190, 60, 0.95);
+}
+.project-card--lantern.project-card--awake .project-art__sparkle--two {
+  transform: translate(7px, 8px) scale(1.5);
+  opacity: 1;
+  color: #fffdf5;
+  text-shadow: 0 0 16px rgba(255, 235, 150, 1), 0 0 32px rgba(255, 190, 60, 0.95);
+}
+.project-card--lantern.project-card--awake .project-action {
+  border-color: rgba(255, 225, 130, 0.95);
+  background: rgba(255, 210, 100, 0.25);
+  color: #fffbf2;
+  box-shadow: 0 0 22px rgba(255, 205, 90, 0.5);
+}
+@keyframes lanternGlowPulse {
+  0% {
+    filter: brightness(1.36) contrast(1.12) saturate(1.38) drop-shadow(0 0 22px rgba(255, 215, 110, 0.9)) drop-shadow(0 0 45px rgba(255, 175, 40, 0.6));
+  }
+  100% {
+    filter: brightness(1.55) contrast(1.2) saturate(1.5) drop-shadow(0 0 36px rgba(255, 240, 150, 1)) drop-shadow(0 0 75px rgba(255, 190, 50, 0.85));
+  }
+}
 .project-card__body{padding:23px 22px 24px}.project-number{margin:0 0 11px;color:#c4addf;font-size:9px;letter-spacing:.16em}.project-card h3{margin:0 0 10px;font:500 25px/1.1 Fraunces,Georgia,serif}.project-card__body>p:not(.project-number){min-height:72px;margin:0;color:var(--muted);font-size:12px;line-height:1.8}.project-details{margin-top:15px;border-top:1px solid var(--line);padding-top:13px}.project-details summary{color:#e0d0f4;font-size:11px;cursor:pointer}.project-details summary:focus-visible{outline:2px solid #e0d0f4;outline-offset:4px}.project-details p{margin:10px 0 0;color:var(--muted);font-size:11px;line-height:1.8}.project-action{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:44px;margin-top:19px;padding:0 14px;border:1px solid #d9c5f444;border-radius:12px;color:#f0e6ff;background:#bda2e912;font-size:11px;cursor:pointer;transition:background .3s,border-color .3s}.project-action:hover,.project-action:focus-visible{outline-offset:3px;background:#bda2e925;border-color:#d9c5f488}.project-card--awake{border-color:#e5d3ff88;background:linear-gradient(150deg,#d6c2f414,#ffffff03)}
 .projects-footnote{display:flex;justify-content:center;align-items:center;gap:8px;margin:42px 0 0;color:#cbb6df;font:italic 15px Georgia,serif;text-align:center}.projects-footnote svg{flex-shrink:0}
 @media(max-width:900px){.project-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.project-card:last-child{grid-column:1/-1;display:grid;grid-template-columns:.9fr 1.1fr}.project-card:last-child .project-art{height:100%;min-height:220px}.project-card:last-child .project-card__body>p:not(.project-number){min-height:auto}}
 @media(max-width:620px){.projects-section{padding:82px 17px 68px}.project-grid{grid-template-columns:1fr;gap:15px}.project-card:last-child{display:block;grid-column:auto}.project-card:last-child .project-art{height:190px;min-height:0}.project-card__body{padding:20px}.project-card__body>p:not(.project-number){min-height:0}.projects-heading{margin-bottom:32px}.projects-footnote{font-size:13px}}
-@media(prefers-reduced-motion:reduce){.project-card,.project-action,.project-art__frame,.project-art__img,.project-art__sparkle{transition:none!important}}
+@media(prefers-reduced-motion:reduce){.project-card,.project-action,.project-art__frame,.project-art__img,.project-art__sparkle{transition:none!important;animation:none!important}}
 
 /* Phase 5 — the emotional landing, visitor note, and hidden nursery star */
 .wordmark-star{appearance:none;display:grid;place-items:center;flex:0 0 32px;min-height:40px;border:0;border-radius:9px;background:transparent;color:var(--gold);font-family:inherit;font-size:18px;font-weight:700;padding:0;cursor:pointer;line-height:1;touch-action:manipulation}.wordmark-star:hover{background:var(--panel)}.wordmark-star:focus-visible{outline:2px solid #e0d0f4;outline-offset:2px}
