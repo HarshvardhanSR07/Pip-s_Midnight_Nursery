@@ -1,20 +1,11 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowDown, MoonStar, Sparkles, WandSparkles, Heart, RotateCcw } from 'lucide-react';
-import IntroSequence, { hasSeenIntroThisSession, shouldSkipIntroForReducedMotion } from './components/IntroSequence';
 import AudioToggle from './components/AudioToggle';
 import PipMascot from './components/PipMascot';
 import FairyDustIndex from './components/FairyDustIndex';
 import { enableAudio } from './utils/audio';
 
 export default function App() {
-  const [introVisible, setIntroVisible] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.has('intro') || params.has('replay')) return true;
-      if (params.has('nointro')) return false;
-    }
-    return !hasSeenIntroThisSession() && !shouldSkipIntroForReducedMotion();
-  });
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [theme, setTheme] = useState<'midnight' | 'morning'>('midnight');
   const [bubbleCaught, setBubbleCaught] = useState(false);
@@ -26,6 +17,27 @@ export default function App() {
   const [starTaps, setStarTaps] = useState(0);
   const [easterEggFound, setEasterEggFound] = useState(false);
   const [activeProjects, setActiveProjects] = useState<number[]>([]);
+  const [lullabyPlaying, setLullabyPlaying] = useState(false);
+  const lullabyRef = useRef<HTMLAudioElement | null>(null);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      if (lullabyRef.current) {
+        lullabyRef.current.pause();
+        lullabyRef.current = null;
+      }
+    };
+  }, []);
+
+  // Stop lullaby if sound is disabled globally
+  useEffect(() => {
+    if (!soundEnabled && lullabyRef.current && !lullabyRef.current.paused) {
+      lullabyRef.current.pause();
+      setLullabyPlaying(false);
+      setActiveProjects((curr) => curr.filter((id) => id !== 1));
+    }
+  }, [soundEnabled]);
 
   const submitDream = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -46,12 +58,38 @@ export default function App() {
   };
 
   const toggleProject = (projectId: number) => {
+    if (projectId === 1) {
+      const willPlay = !activeProjects.includes(1);
+      if (willPlay) {
+        if (!lullabyRef.current) {
+          lullabyRef.current = new Audio('/assets/audio/skipped-lullaby.mp3');
+        }
+        lullabyRef.current.currentTime = 0;
+        lullabyRef.current.onended = () => {
+          setLullabyPlaying(false);
+          setActiveProjects((curr) => curr.filter((id) => id !== 1));
+        };
+        lullabyRef.current.play().then(() => {
+          setLullabyPlaying(true);
+        }).catch(() => {
+          setLullabyPlaying(false);
+        });
+        setActiveProjects((curr) => [...curr.filter((id) => id !== 1), 1]);
+      } else {
+        if (lullabyRef.current) {
+          lullabyRef.current.pause();
+          lullabyRef.current.currentTime = 0;
+        }
+        setLullabyPlaying(false);
+        setActiveProjects((curr) => curr.filter((id) => id !== 1));
+      }
+      return;
+    }
+
     setActiveProjects((current) => current.includes(projectId)
       ? current.filter((id) => id !== projectId)
       : [...current, projectId]);
   };
-
-  const completeIntro = useCallback(() => setIntroVisible(false), []);
 
   const toggleSound = useCallback(async () => {
     const nextValue = !soundEnabled;
@@ -66,16 +104,9 @@ export default function App() {
   return (
     <div className={`site-shell site-shell--${theme}`}>
       <FairyDustIndex />
-      <a className="skip-link" href="#home" inert={introVisible ? '' : undefined}>Skip to story</a>
-      {introVisible && (
-        <IntroSequence
-          soundEnabled={soundEnabled}
-          onToggleSound={toggleSound}
-          onComplete={completeIntro}
-        />
-      )}
+      <a className="skip-link" href="#home">Skip to story</a>
 
-      <header className="site-header" inert={introVisible ? '' : undefined}>
+      <header className="site-header">
         <div className="wordmark-group">
           <button
             className="wordmark-star"
@@ -101,22 +132,10 @@ export default function App() {
             <MoonStar size={17} aria-hidden="true" />
             <span>{theme === 'midnight' ? 'Midnight' : 'Morning'}</span>
           </button>
-          <button
-            className="utility-button replay-intro-button"
-            type="button"
-            onClick={() => {
-              try { window.sessionStorage.removeItem('pip-midnight-intro-seen'); } catch {}
-              setIntroVisible(true);
-            }}
-            title="Watch Pip's introduction again"
-          >
-            <RotateCcw size={15} aria-hidden="true" />
-            <span>Replay intro</span>
-          </button>
         </nav>
       </header>
 
-      <main id="home" tabIndex={-1} inert={introVisible ? '' : undefined}>
+      <main id="home" tabIndex={-1}>
         <section className="hero-section">
           <div className="hero-backdrop" aria-hidden="true">
             <span className="hero-moon" />
@@ -217,11 +236,19 @@ export default function App() {
                     className="project-art__img"
                     loading="lazy"
                   />
+                  {lullabyPlaying && (
+                    <div className="lullaby-audio-indicator" aria-label="Lullaby music box playing">
+                      <span className="lullaby-bar" />
+                      <span className="lullaby-bar" />
+                      <span className="lullaby-bar" />
+                      <span className="lullaby-bar" />
+                    </div>
+                  )}
                 </div>
                 <span className="project-art__sparkle project-art__sparkle--one">✦</span>
                 <span className="project-art__sparkle project-art__sparkle--two">♪</span>
               </div>
-              <div className="project-card__body"><p className="project-number">PROJECT 01 · SOUND DESIGN</p><h3>The Skipped Lullaby</h3><p>A lullaby with one missing note. The silence leaves just enough room for a dreamer’s own imagination.</p><details className="project-details"><summary>Inspect the invention</summary><p>Pip’s note-box plays a tiny tune, pauses, then lets the listener finish the melody in their head. The “bug” is the feature.</p></details><button className="project-action" type="button" onClick={() => toggleProject(1)} aria-pressed={activeProjects.includes(1)}>{activeProjects.includes(1) ? 'Let the note rest' : 'Play the missing note'} <span aria-hidden="true">↗</span></button></div>
+              <div className="project-card__body"><p className="project-number">PROJECT 01 · SOUND DESIGN</p><h3>The Skipped Lullaby</h3><p>A lullaby with one missing note. The silence leaves just enough room for a dreamer’s own imagination.</p><details className="project-details"><summary>Inspect the invention</summary><p>Pip’s note-box plays a tiny tune, pauses, then lets the listener finish the melody in their head. The “bug” is the feature.</p></details><button className="project-action" type="button" onClick={() => toggleProject(1)} aria-pressed={activeProjects.includes(1)}>{lullabyPlaying ? 'Let the note rest' : 'Play the missing note'} <span aria-hidden="true">↗</span></button></div>
             </article>
             <article className={`project-card project-card--lantern${activeProjects.includes(2) ? ' project-card--awake' : ''}`}>
               <div className="project-art" aria-hidden="true">
@@ -289,9 +316,9 @@ export default function App() {
         </section>
       </main>
 
-      <footer className="site-footer" inert={introVisible ? '' : undefined}>
+      <footer className="site-footer">
         <span>Made with moonlight at the Midnight Nursery.</span>
-        <span>Phase 8 · Video Intro Release</span>
+        <span>Phase 8 · Midnight Nursery</span>
       </footer>
     </div>
   );
