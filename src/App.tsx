@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowDown, MoonStar, Sparkles, WandSparkles, Heart, RotateCcw } from 'lucide-react';
+import IntroSequence, { hasSeenIntroThisSession, shouldSkipIntroForReducedMotion } from './components/IntroSequence';
 import AudioToggle from './components/AudioToggle';
 import PipMascot from './components/PipMascot';
 import FairyDustIndex from './components/FairyDustIndex';
 import { enableAudio } from './utils/audio';
 
 export default function App() {
+  const [introVisible, setIntroVisible] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('intro') || params.has('replay')) return true;
+      if (params.has('nointro')) return false;
+    }
+    return !hasSeenIntroThisSession() && !shouldSkipIntroForReducedMotion();
+  });
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [theme, setTheme] = useState<'midnight' | 'morning'>('midnight');
   const [bubbleCaught, setBubbleCaught] = useState(false);
@@ -91,6 +100,8 @@ export default function App() {
       : [...current, projectId]);
   };
 
+  const completeIntro = useCallback(() => setIntroVisible(false), []);
+
   const toggleSound = useCallback(async () => {
     const nextValue = !soundEnabled;
     setSoundEnabled(nextValue);
@@ -104,9 +115,16 @@ export default function App() {
   return (
     <div className={`site-shell site-shell--${theme}`}>
       <FairyDustIndex />
-      <a className="skip-link" href="#home">Skip to story</a>
+      <a className="skip-link" href="#home" inert={introVisible ? '' : undefined}>Skip to story</a>
+      {introVisible && (
+        <IntroSequence
+          soundEnabled={soundEnabled}
+          onToggleSound={toggleSound}
+          onComplete={completeIntro}
+        />
+      )}
 
-      <header className="site-header">
+      <header className="site-header" inert={introVisible ? '' : undefined}>
         <div className="wordmark-group">
           <button
             className="wordmark-star"
@@ -132,10 +150,22 @@ export default function App() {
             <MoonStar size={17} aria-hidden="true" />
             <span>{theme === 'midnight' ? 'Midnight' : 'Morning'}</span>
           </button>
+          <button
+            className="utility-button replay-intro-button"
+            type="button"
+            onClick={() => {
+              try { window.sessionStorage.removeItem('pip-midnight-intro-seen-v2'); } catch {}
+              setIntroVisible(true);
+            }}
+            title="Watch Pip's introduction again"
+          >
+            <RotateCcw size={15} aria-hidden="true" />
+            <span>Replay intro</span>
+          </button>
         </nav>
       </header>
 
-      <main id="home" tabIndex={-1}>
+      <main id="home" tabIndex={-1} inert={introVisible ? '' : undefined}>
         <section className="hero-section">
           <div className="hero-backdrop" aria-hidden="true">
             <span className="hero-moon" />
@@ -316,7 +346,7 @@ export default function App() {
         </section>
       </main>
 
-      <footer className="site-footer">
+      <footer className="site-footer" inert={introVisible ? '' : undefined}>
         <span>Made with moonlight at the Midnight Nursery.</span>
         <span>Phase 8 · Midnight Nursery</span>
       </footer>

@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SkipForward } from 'lucide-react';
+import { SkipForward, Volume2 } from 'lucide-react';
 import AudioToggle from './AudioToggle';
 import Cloud from './Cloud';
-import PipCharacter from './PipCharacter';
-import { playChime } from '../utils/audio';
 
 type IntroSequenceProps = {
   soundEnabled: boolean;
@@ -11,13 +9,10 @@ type IntroSequenceProps = {
   onComplete: () => void;
 };
 
-type IntroVariant = 'dark' | 'nursery';
-const INTRO_VARIANT: IntroVariant = 'dark';
-
-const VIDEO_SRC = `/assets/intro/intro-${INTRO_VARIANT}.mp4`;
-const POSTER_SRC = `/assets/intro/intro-${INTRO_VARIANT}-poster.jpg`;
-
-const INTRO_KEY = 'pip-midnight-intro-seen';
+// Use the clean dark intro from antigravity_video_pack (assets/scene_02_clean.mp4)
+const VIDEO_SRC = '/assets/intro/scene_02_clean.mp4';
+const POSTER_SRC = '/assets/intro/intro-dark-poster.jpg';
+const INTRO_KEY = 'pip-midnight-intro-seen-v2';
 
 export function shouldSkipIntroForReducedMotion(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -35,7 +30,7 @@ export function markIntroSeen(): void {
   try {
     window.sessionStorage.setItem(INTRO_KEY, 'yes');
   } catch {
-    // Some private browsing modes can block sessionStorage; the page still works.
+    // Private browsing safe
   }
 }
 
@@ -43,26 +38,24 @@ export default function IntroSequence({ soundEnabled, onToggleSound, onComplete 
   const [useFallback, setUseFallback] = useState(false);
   const [isFading, setIsFading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [needsUserTapForSound, setNeedsUserTapForSound] = useState(false);
-
-  // Fallback states for CSS/SVG animation path
-  const [fallbackPhase, setFallbackPhase] = useState<'wandering-cloud' | 'pip-greeting' | 'handoff'>('wandering-cloud');
-  const [fallbackGreetingVisible, setFallbackGreetingVisible] = useState(false);
-  const [fallbackWaving, setFallbackWaving] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const completedRef = useRef(false);
-  const lastTimeRef = useRef(0);
   const soundEnabledRef = useRef(soundEnabled);
 
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
     const v = videoRef.current;
     if (v) {
-      v.muted = !soundEnabled;
-      if (soundEnabled) {
+      if (!soundEnabled) {
+        v.muted = true;
+        setIsVideoMuted(true);
+      } else {
+        // Attempt to unmute if user enabled sound
+        v.muted = false;
         v.volume = 1.0;
-        setNeedsUserTapForSound(false);
+        setIsVideoMuted(false);
       }
     }
   }, [soundEnabled]);
@@ -87,26 +80,26 @@ export default function IntroSequence({ soundEnabled, onToggleSound, onComplete 
     }
   };
 
-  // Autoplay attempt on mount & gesture unmuting
+  // Safe autoplay on mount
   useEffect(() => {
     if (useFallback) return;
 
     const video = videoRef.current;
     if (video) {
-      video.muted = !soundEnabledRef.current;
-      video.volume = 1.0;
+      // Start muted to satisfy browser autoplay requirements
+      video.muted = true;
+      setIsVideoMuted(true);
       const playPromise = video.play();
       if (playPromise !== undefined) {
-        playPromise.catch((_err) => {
-          // If browser Autoplay policy blocks unmuted audio on load, start muted and listen for user gesture
-          if (!video.muted) {
+        playPromise
+          .then(() => {
+            // If sound was preferred, we will unmute on first user interaction
+          })
+          .catch(() => {
+            // If autoplay failed completely, try muted retry
             video.muted = true;
-            setNeedsUserTapForSound(true);
             video.play().catch(() => setUseFallback(true));
-          } else {
-            setUseFallback(true);
-          }
-        });
+          });
       }
     }
 
@@ -115,28 +108,16 @@ export default function IntroSequence({ soundEnabled, onToggleSound, onComplete 
       complete();
     }, 20_500);
 
-    // Check for stalled playback (>6s without forward progress)
-    const stallInterval = window.setInterval(() => {
-      const v = videoRef.current;
-      if (!v) return;
-      if (!v.paused && !v.ended) {
-        if (v.currentTime > 0.5 && Math.abs(v.currentTime - lastTimeRef.current) < 0.1) {
-          setUseFallback(true);
-        } else {
-          lastTimeRef.current = v.currentTime;
-        }
-      }
-    }, 6_000);
-
-    // Unmute on first user gesture if sound is enabled
+    // Gesture unmuting
     const handleGesture = () => {
       const v = videoRef.current;
-      if (soundEnabledRef.current && v) {
+      if (v && soundEnabledRef.current && v.muted) {
         v.muted = false;
         v.volume = 1.0;
-        setNeedsUserTapForSound(false);
+        setIsVideoMuted(false);
       }
     };
+
     window.addEventListener('click', handleGesture);
     window.addEventListener('pointerdown', handleGesture);
     window.addEventListener('keydown', handleGesture);
@@ -144,7 +125,6 @@ export default function IntroSequence({ soundEnabled, onToggleSound, onComplete 
 
     return () => {
       window.clearTimeout(safetyTimer);
-      window.clearInterval(stallInterval);
       window.removeEventListener('click', handleGesture);
       window.removeEventListener('pointerdown', handleGesture);
       window.removeEventListener('keydown', handleGesture);
@@ -152,48 +132,44 @@ export default function IntroSequence({ soundEnabled, onToggleSound, onComplete 
     };
   }, [useFallback, complete]);
 
-  // Fallback timer sequence (only runs if useFallback becomes true)
+  // Fallback timer sequence if video fails or reduced motion
   useEffect(() => {
     if (!useFallback) return;
 
-    const greetingTimer = window.setTimeout(() => {
-      setFallbackPhase('pip-greeting');
-      playChime(soundEnabledRef.current, 660);
-    }, 10_000);
-    const subtitleTimer = window.setTimeout(() => setFallbackGreetingVisible(true), 15_000);
-    const waveTimer = window.setTimeout(() => {
-      setFallbackWaving(true);
-      playChime(soundEnabledRef.current, 880);
-    }, 15_150);
-    const handoffTimer = window.setTimeout(() => setFallbackPhase('handoff'), 18_000);
-    const fadeTimer = window.setTimeout(() => setIsFading(true), 19_200);
-    const completeTimer = window.setTimeout(complete, 20_000);
+    const fadeTimer = window.setTimeout(() => setIsFading(true), 4_500);
+    const completeTimer = window.setTimeout(complete, 5_200);
 
     return () => {
-      window.clearTimeout(greetingTimer);
-      window.clearTimeout(subtitleTimer);
-      window.clearTimeout(waveTimer);
-      window.clearTimeout(handoffTimer);
       window.clearTimeout(fadeTimer);
       window.clearTimeout(completeTimer);
     };
   }, [useFallback, complete]);
 
-  const skip = () => {
-    complete();
+  const toggleVideoAudio = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.muted) {
+      v.muted = false;
+      v.volume = 1.0;
+      setIsVideoMuted(false);
+      if (!soundEnabled) onToggleSound();
+    } else {
+      v.muted = true;
+      setIsVideoMuted(true);
+    }
   };
 
   return (
     <div
       className={`intro-overlay ${isFading ? 'intro-overlay--fading' : ''} ${
-        useFallback ? `intro-overlay--${fallbackPhase}` : 'intro-overlay--video'
+        useFallback ? 'intro-overlay--fallback' : 'intro-overlay--video'
       }`}
       role="dialog"
       aria-modal="true"
       aria-label="Pip's introduction"
     >
-      <AudioToggle enabled={soundEnabled} onToggle={onToggleSound} />
-      <button className="skip-intro" type="button" onClick={skip}>
+      <AudioToggle enabled={soundEnabled && !isVideoMuted} onToggle={toggleVideoAudio} />
+      <button className="skip-intro" type="button" onClick={complete}>
         Skip intro <SkipForward size={16} aria-hidden="true" />
       </button>
 
@@ -205,7 +181,7 @@ export default function IntroSequence({ soundEnabled, onToggleSound, onComplete 
             src={VIDEO_SRC}
             poster={POSTER_SRC}
             autoPlay
-            muted={!soundEnabled}
+            muted
             playsInline
             preload="auto"
             aria-hidden="true"
@@ -215,7 +191,7 @@ export default function IntroSequence({ soundEnabled, onToggleSound, onComplete 
             onError={() => setUseFallback(true)}
           />
 
-          {/* Pure black corner mask preventing any watermark or logo from ever displaying in the bottom right corner */}
+          {/* Mask guaranteeing no watermark at bottom right */}
           <div className="intro-video-corner-mask" aria-hidden="true" />
 
           {/* Subtitle during Pip's greeting (13.5s to 18.5s) */}
@@ -225,62 +201,45 @@ export default function IntroSequence({ soundEnabled, onToggleSound, onComplete 
             </div>
           )}
 
-          {/* Sound enable prompt if browser autoplay initially blocked unmuted sound */}
-          {needsUserTapForSound && soundEnabled && currentTime < 12 && (
-            <div className="sound-unmute-hint" aria-hidden="true">
-              <span>Click anywhere to enable sound ♫</span>
-            </div>
+          {/* Unmute prompt banner if sound is enabled globally but video is muted by browser policy */}
+          {isVideoMuted && soundEnabled && currentTime > 1.5 && currentTime < 12 && (
+            <button
+              type="button"
+              className="sound-unmute-hint"
+              onClick={toggleVideoAudio}
+              aria-label="Unmute intro audio"
+            >
+              <Volume2 size={14} aria-hidden="true" />
+              <span>Tap anywhere for sound</span>
+            </button>
           )}
 
           <p className="intro-sr-only" aria-live="polite">
-            {currentTime < 10
-              ? 'A little cloud is finding its way across the midnight sky.'
+            {currentTime < 2
+              ? 'A midnight darkness rests over the nursery.'
+              : currentTime < 9
+              ? 'A fluffy cloud enters and playfully bounces across the sky with stardust trails.'
               : currentTime < 18
-              ? 'Pip wakes up and greets you: Halooo, I Pip.'
-              : 'Pip leads you into the Midnight Nursery.'}
+              ? 'Pip the baby skeleton emerges from the cloud in a starry nightcap and greets you.'
+              : 'Entering the Midnight Nursery.'}
           </p>
         </>
       ) : (
-        <>
+        <div className="intro-fallback-stage">
           <div className="intro-stars" aria-hidden="true">
-            {Array.from({ length: 16 }, (_, i) => (
+            {Array.from({ length: 12 }, (_, i) => (
               <span key={i} className={`intro-star intro-star--${i + 1}`}>✦</span>
             ))}
-            <span className="impact-burst impact-burst--top">✦</span>
-            <span className="impact-burst impact-burst--left">✦</span>
-            <span className="impact-burst impact-burst--bottom">✦</span>
           </div>
-
-          <div className="intro-stage" aria-hidden="false">
-            <div
-              className={`cloud-track ${
-                fallbackPhase === 'wandering-cloud' ? 'cloud-track--wandering' : 'cloud-track--resting'
-              }`}
-            >
-              <Cloud />
-              <div className="cloud-dust cloud-dust--one" />
-              <div className="cloud-dust cloud-dust--two" />
-              <div className="cloud-dust cloud-dust--three" />
-            </div>
-
-            {fallbackPhase !== 'wandering-cloud' && (
-              <div className={`pip-emergence${fallbackPhase === 'handoff' ? ' pip-emergence--handoff' : ''}`}>
-                <PipCharacter waving={fallbackWaving} />
-                {fallbackGreetingVisible && fallbackPhase !== 'handoff' && (
-                  <div className="pip-greeting" role="status">“Halooo, I Pip”</div>
-                )}
-              </div>
-            )}
+          <div className="intro-fallback-content">
+            <Cloud />
+            <h2>The Midnight Nursery</h2>
+            <p>“I build the dreams you fall asleep inside.”</p>
+            <button className="story-action" type="button" onClick={complete}>
+              Enter nursery
+            </button>
           </div>
-
-          <p className="intro-sr-only" aria-live="polite">
-            {fallbackPhase === 'wandering-cloud'
-              ? 'A little cloud is finding its way.'
-              : fallbackPhase === 'pip-greeting'
-              ? 'Pip wakes up and greets you: Halooo, I Pip.'
-              : 'Pip leads you into the Midnight Nursery.'}
-          </p>
-        </>
+        </div>
       )}
     </div>
   );
