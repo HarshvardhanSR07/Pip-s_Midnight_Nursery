@@ -194,12 +194,7 @@ export default function IntroSequence({ soundEnabled, onToggleSound, onComplete 
           {/* Mask guaranteeing no watermark at bottom right */}
           <div className="intro-video-corner-mask" aria-hidden="true" />
 
-          {/* Subtitle during Pip's greeting (13.5s to 18.5s) */}
-          {currentTime >= 13.5 && currentTime < 18.5 && (
-            <div className="intro-video-subtitle" role="status">
-              “Halooo, I Pip”
-            </div>
-          )}
+
 
           {/* Unmute prompt banner if sound is enabled globally but video is muted by browser policy */}
           {isVideoMuted && soundEnabled && currentTime > 1.5 && currentTime < 12 && (
